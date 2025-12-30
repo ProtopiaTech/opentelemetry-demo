@@ -1,4 +1,4 @@
-pyroscope-io==0.8.7
+pyroscope-io==0.8.6
 Flask==3.1.2
 locust-plugins[playwright]==5.0.0
 python-json-logger==4.0.0

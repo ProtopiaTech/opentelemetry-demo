@@ -3,9 +3,9 @@ module github.com/open-telemetry/opentelemetry-demo/src/checkout
 go 1.24.2
 
 require (
-	github.com/grafana/pyroscope-go v1.2.0
 	github.com/IBM/sarama v1.46.3
 	github.com/google/uuid v1.6.0
+	github.com/grafana/pyroscope-go v1.2.0
 	github.com/open-feature/go-sdk v1.17.0
 	github.com/open-feature/go-sdk-contrib/hooks/open-telemetry v0.3.6
 	github.com/open-feature/go-sdk-contrib/providers/flagd v0.3.1
@@ -45,6 +45,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/grafana/pyroscope-go/godeltaprof v0.1.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
