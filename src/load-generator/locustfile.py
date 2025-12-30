@@ -9,6 +9,14 @@ import random
 import uuid
 import logging
 
+# Pyroscope
+import pyroscope
+if os.environ.get('PYROSCOPE_SERVER_ADDRESS'):
+    pyroscope.configure(
+        application_name=os.environ.get('PYROSCOPE_APPLICATION_NAME', 'load-generator'),
+        server_address=os.environ.get('PYROSCOPE_SERVER_ADDRESS'),
+    )
+
 from locust import HttpUser, task, between
 from locust_plugins.users.playwright import PlaywrightUser, pw, PageWithRetry, event
 

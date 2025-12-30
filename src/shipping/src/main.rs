@@ -13,6 +13,38 @@ use shipping_service::{get_quote, ship_order};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Initialize Pyroscope profiler if configured
+    let _pyroscope_agent = if let Ok(server_address) = env::var("PYROSCOPE_SERVER_ADDRESS") {
+        use pyroscope::PyroscopeAgent;
+        use pyroscope_pprofrs::{pprof_backend, PprofConfig};
+
+        let app_name = env::var("PYROSCOPE_APPLICATION_NAME").unwrap_or_else(|_| "shipping".to_string());
+
+        match PyroscopeAgent::builder(server_address, app_name)
+            .backend(pprof_backend(PprofConfig::new().sample_rate(100)))
+            .build()
+        {
+            Ok(agent) => {
+                match agent.start() {
+                    Ok(running_agent) => {
+                        info!("Pyroscope profiler started");
+                        Some(running_agent)
+                    }
+                    Err(e) => {
+                        info!("Failed to start Pyroscope agent: {}", e);
+                        None
+                    }
+                }
+            }
+            Err(e) => {
+                info!("Failed to build Pyroscope agent: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     match init_otel() {
         Ok(_) => {
             info!("Successfully configured OTel");

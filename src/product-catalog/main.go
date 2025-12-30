@@ -20,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafana/pyroscope-go"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
@@ -133,6 +134,22 @@ func initLoggerProvider() *sdklog.LoggerProvider {
 }
 
 func main() {
+	// Initialize Pyroscope profiler
+	if pyroscopeAddr := os.Getenv("PYROSCOPE_SERVER_ADDRESS"); pyroscopeAddr != "" {
+		pyroscope.Start(pyroscope.Config{
+			ApplicationName: os.Getenv("PYROSCOPE_APPLICATION_NAME"),
+			ServerAddress:   pyroscopeAddr,
+			ProfileTypes: []pyroscope.ProfileType{
+				pyroscope.ProfileCPU,
+				pyroscope.ProfileAllocObjects,
+				pyroscope.ProfileAllocSpace,
+				pyroscope.ProfileInuseObjects,
+				pyroscope.ProfileInuseSpace,
+				pyroscope.ProfileGoroutines,
+			},
+		})
+	}
+
 	lp := initLoggerProvider()
 	defer func() {
 		if err := lp.Shutdown(context.Background()); err != nil {

@@ -47,6 +47,11 @@ services:
       - OTEL_SERVICE_NAME=ad
       # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
       - _JAVA_OPTIONS
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=ad
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+      - PYROSCOPE_FORMAT=jfr
+      - PYROSCOPE_PROFILER_EVENT=cpu
     depends_on:
       alloy:
         condition: service_started
@@ -135,6 +140,9 @@ services:
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=checkout
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=checkout
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       cart:
         condition: service_started
@@ -207,6 +215,9 @@ services:
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=email
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=email
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       alloy:
         condition: service_started
@@ -248,6 +259,9 @@ services:
       - OTEL_COLLECTOR_HOST
       - FLAGD_HOST
       - FLAGD_PORT
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=frontend
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       ad:
         condition: service_started
@@ -377,6 +391,9 @@ services:
       - FLAGD_HOST
       - FLAGD_PORT
       - FLAGD_OFREP_PORT
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=load-generator
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       frontend:
         condition: service_started
@@ -409,6 +426,9 @@ services:
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=payment
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=payment
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       alloy:
         condition: service_started
@@ -440,6 +460,9 @@ services:
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=product-catalog
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=product-catalog
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     volumes:
       - ./src/product-catalog/products:/usr/src/app/products
     depends_on:
@@ -504,12 +527,54 @@ services:
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=recommendation
       - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=recommendation
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     depends_on:
       product-catalog:
         condition: service_started
       alloy:
         condition: service_started
     logging: *logging
+
+  # Accounting service (Kafka consumer - Pyroscope only, no Beyla)
+  accounting:
+    environment:
+      - PYROSCOPE_APPLICATION_NAME=accounting
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+      - PYROSCOPE_PROFILING_ENABLED=1
+      - CORECLR_ENABLE_PROFILING=1
+      - CORECLR_PROFILER={BD1A650D-AC5D-4896-B64F-D6FA25D6B26A}
+      - CORECLR_PROFILER_PATH=/dotnet/Pyroscope.Profiler.Native.so
+      - LD_PRELOAD=/dotnet/Pyroscope.Linux.ApiWrapper.x64.so
+      - LD_LIBRARY_PATH=/dotnet
+      - DOTNET_EnableDiagnostics=1
+      - DOTNET_EnableDiagnostics_IPC=0
+      - DOTNET_EnableDiagnostics_Debugger=0
+      - DOTNET_EnableDiagnostics_Profiler=1
+
+  # Fraud Detection service (Kafka consumer - Pyroscope only, no Beyla)
+  fraud-detection:
+    environment:
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=fraud-detection
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+      - PYROSCOPE_FORMAT=jfr
+      - PYROSCOPE_PROFILER_EVENT=cpu
+
+  # Product Reviews service
+  product-reviews:
+    environment:
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=product-reviews
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
+
+  # LLM service
+  llm:
+    environment:
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=llm
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
 
   # Shipping service
   shipping:
@@ -535,6 +600,9 @@ services:
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=shipping
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      # Pyroscope configuration
+      - PYROSCOPE_APPLICATION_NAME=shipping
+      - PYROSCOPE_SERVER_ADDRESS=http://pyroscope:4040
     healthcheck:
       test: ["CMD-SHELL", "timeout 1 bash -c '>/dev/tcp/localhost/${SHIPPING_PORT}'"]
       start_period: 10s
@@ -936,6 +1004,503 @@ services:
     depends_on:
       mythical-recorder:
         condition: service_started
+
+  # ********************
+  # OBI/Beyla Sidecars for OpenTelemetry Demo Services
+  # ********************
+  beyla-ad:
+    image: grafana/beyla:2.1.0
+    pid: "service:ad"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${AD_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-ad"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      ad:
+        condition: service_started
+
+  beyla-cart:
+    image: grafana/beyla:2.1.0
+    pid: "service:cart"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${CART_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-cart"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      cart:
+        condition: service_started
+
+  beyla-checkout:
+    image: grafana/beyla:2.1.0
+    pid: "service:checkout"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${CHECKOUT_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-checkout"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      checkout:
+        condition: service_started
+
+  beyla-currency:
+    image: grafana/beyla:2.1.0
+    pid: "service:currency"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${CURRENCY_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-currency"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      currency:
+        condition: service_started
+
+  beyla-email:
+    image: grafana/beyla:2.1.0
+    pid: "service:email"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${EMAIL_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-email"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      email:
+        condition: service_started
+
+  beyla-frontend:
+    image: grafana/beyla:2.1.0
+    pid: "service:frontend"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${FRONTEND_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-frontend"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      frontend:
+        condition: service_started
+
+  beyla-payment:
+    image: grafana/beyla:2.1.0
+    pid: "service:payment"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${PAYMENT_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-payment"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      payment:
+        condition: service_started
+
+  beyla-product-catalog:
+    image: grafana/beyla:2.1.0
+    pid: "service:product-catalog"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${PRODUCT_CATALOG_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-product-catalog"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      product-catalog:
+        condition: service_started
+
+  beyla-quote:
+    image: grafana/beyla:2.1.0
+    pid: "service:quote"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${QUOTE_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-quote"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      quote:
+        condition: service_started
+
+  beyla-recommendation:
+    image: grafana/beyla:2.1.0
+    pid: "service:recommendation"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${RECOMMENDATION_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-recommendation"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      recommendation:
+        condition: service_started
+
+  beyla-shipping:
+    image: grafana/beyla:2.1.0
+    pid: "service:shipping"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${SHIPPING_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-shipping"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      shipping:
+        condition: service_started
+
+  beyla-load-generator:
+    image: grafana/beyla:2.1.0
+    pid: "service:load-generator"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${LOCUST_WEB_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-load-generator"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      load-generator:
+        condition: service_started
+
+  beyla-flagd-ui:
+    image: grafana/beyla:2.1.0
+    pid: "service:flagd-ui"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${FLAGD_UI_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-flagd-ui"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      flagd-ui:
+        condition: service_started
+
+  beyla-image-provider:
+    image: grafana/beyla:2.1.0
+    pid: "service:image-provider"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${IMAGE_PROVIDER_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-image-provider"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      image-provider:
+        condition: service_started
+
+  beyla-frontend-proxy:
+    image: grafana/beyla:2.1.0
+    pid: "service:frontend-proxy"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${ENVOY_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-frontend-proxy"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      frontend-proxy:
+        condition: service_started
+
+  beyla-product-reviews:
+    image: grafana/beyla:2.1.0
+    pid: "service:product-reviews"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${PRODUCT_REVIEWS_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-product-reviews"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      product-reviews:
+        condition: service_started
+
+  beyla-llm:
+    image: grafana/beyla:2.1.0
+    pid: "service:llm"
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - NET_RAW
+      - DAC_READ_SEARCH
+      - SYS_PTRACE
+      - PERFMON
+      - BPF
+      - CHECKPOINT_RESTORE
+    command:
+      - /beyla
+      - --config=/configs/config.yaml
+    volumes:
+      - ./beyla/:/configs
+    environment:
+      BEYLA_OPEN_PORT: "${LLM_PORT}"
+      BEYLA_SERVICE_NAMESPACE: "otel-demo"
+      BEYLA_PROMETHEUS_PORT: "9090"
+      OTEL_SERVICE_NAME: "beyla-llm"
+      OTEL_EXPORTER_OTLP_TRACES_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://alloy:4317"
+    depends_on:
+      llm:
+        condition: service_started
+
 volumes:
   grafana:
   postgres:

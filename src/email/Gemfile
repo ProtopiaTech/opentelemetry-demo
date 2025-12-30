@@ -23,3 +23,5 @@ gem "opentelemetry-instrumentation-all",   "~> 0.87"
 
 gem "openfeature-sdk", "~> 0.4"
 gem "openfeature-flagd-provider", "~> 0.1"
+
+gem "pyroscope", "~> 0.5"

@@ -1,6 +1,16 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Initialize Pyroscope profiler
+const Pyroscope = require('@pyroscope/nodejs');
+if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+  Pyroscope.init({
+    serverAddress: process.env.PYROSCOPE_SERVER_ADDRESS,
+    appName: process.env.PYROSCOPE_APPLICATION_NAME || 'frontend',
+  });
+  Pyroscope.start();
+}
+
 const opentelemetry = require('@opentelemetry/sdk-node');
 const {getNodeAutoInstrumentations} = require('@opentelemetry/auto-instrumentations-node');
 const {OTLPTraceExporter} = require('@opentelemetry/exporter-trace-otlp-grpc');

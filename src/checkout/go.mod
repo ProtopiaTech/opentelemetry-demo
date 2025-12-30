@@ -3,6 +3,7 @@ module github.com/open-telemetry/opentelemetry-demo/src/checkout
 go 1.24.2
 
 require (
+	github.com/grafana/pyroscope-go v1.2.0
 	github.com/IBM/sarama v1.46.3
 	github.com/google/uuid v1.6.0
 	github.com/open-feature/go-sdk v1.17.0

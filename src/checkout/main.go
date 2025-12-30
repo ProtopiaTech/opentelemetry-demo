@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/grafana/pyroscope-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
@@ -153,6 +154,22 @@ type checkout struct {
 func main() {
 	var port string
 	mustMapEnv(&port, "CHECKOUT_PORT")
+
+	// Initialize Pyroscope profiler
+	if pyroscopeAddr := os.Getenv("PYROSCOPE_SERVER_ADDRESS"); pyroscopeAddr != "" {
+		pyroscope.Start(pyroscope.Config{
+			ApplicationName: os.Getenv("PYROSCOPE_APPLICATION_NAME"),
+			ServerAddress:   pyroscopeAddr,
+			ProfileTypes: []pyroscope.ProfileType{
+				pyroscope.ProfileCPU,
+				pyroscope.ProfileAllocObjects,
+				pyroscope.ProfileAllocSpace,
+				pyroscope.ProfileInuseObjects,
+				pyroscope.ProfileInuseSpace,
+				pyroscope.ProfileGoroutines,
+			},
+		})
+	}
 
 	tp := initTracerProvider()
 	defer func() {

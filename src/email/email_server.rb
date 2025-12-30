@@ -7,6 +7,15 @@ require "sinatra"
 require "open_feature/sdk"
 require "openfeature/flagd/provider"
 
+# Initialize Pyroscope profiler
+if ENV['PYROSCOPE_SERVER_ADDRESS']
+  require "pyroscope"
+  Pyroscope.configure do |config|
+    config.app_name = ENV['PYROSCOPE_APPLICATION_NAME'] || 'email'
+    config.server_address = ENV['PYROSCOPE_SERVER_ADDRESS']
+  end
+end
+
 require "opentelemetry/sdk"
 require "opentelemetry-logs-sdk"
 require "opentelemetry-metrics-sdk"

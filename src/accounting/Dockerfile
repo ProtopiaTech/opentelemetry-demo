@@ -26,10 +26,15 @@ USER app
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+# Copy Pyroscope profiler native libraries
+COPY --from=pyroscope/pyroscope-dotnet:0.13.0-glibc /Pyroscope.Profiler.Native.so /dotnet/
+COPY --from=pyroscope/pyroscope-dotnet:0.13.0-glibc /Pyroscope.Linux.ApiWrapper.x64.so /dotnet/
+
 USER root
 RUN mkdir -p "/var/log/opentelemetry/dotnet"
 RUN chown app "/var/log/opentelemetry/dotnet"
 RUN chown app "/app/instrument.sh"
+RUN chown -R app "/dotnet"
 USER app
 ENV OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_SOURCES=Accounting.Consumer
 

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh run view:*)",
+      "Bash(gh api:*)",
+      "Bash(MSYS_NO_PATHCONV=1 make:*)",
+      "Bash(wsl bash:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix trailing whitespace in generated protobuf headers\n\nSync generated C++ gRPC headers with upstream to fix protobuf check in CI.\nThe difference was trailing spaces in license comments.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(for dir in */)",
+      "Bash(do [ -f \"$dir/Dockerfile\" ])",
+      "Bash(echo:*)",
+      "Bash(done)"
+    ]
+  }
+}

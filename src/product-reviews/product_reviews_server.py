@@ -10,6 +10,14 @@ import json
 from concurrent import futures
 import random
 
+# Pyroscope
+import pyroscope
+if os.environ.get('PYROSCOPE_SERVER_ADDRESS'):
+    pyroscope.configure(
+        application_name=os.environ.get('PYROSCOPE_APPLICATION_NAME', 'product-reviews'),
+        server_address=os.environ.get('PYROSCOPE_SERVER_ADDRESS'),
+    )
+
 # Pip
 import grpc
 from opentelemetry import trace, metrics

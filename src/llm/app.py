@@ -3,12 +3,21 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+
+# Pyroscope
+import pyroscope
+if os.environ.get('PYROSCOPE_SERVER_ADDRESS'):
+    pyroscope.configure(
+        application_name=os.environ.get('PYROSCOPE_APPLICATION_NAME', 'llm'),
+        server_address=os.environ.get('PYROSCOPE_SERVER_ADDRESS'),
+    )
+
 from flask import Flask, request, jsonify, Response
 import json
 import time
 import random
 import re
-import os
 import logging
 
 from openfeature import api
