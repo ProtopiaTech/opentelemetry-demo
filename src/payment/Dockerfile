@@ -9,7 +9,7 @@ WORKDIR /usr/src/app/
 COPY ./src/payment/package.json package.json
 COPY ./src/payment/package-lock.json package-lock.json
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm install @pyroscope/nodejs
 
 # -----------------------------------------------------------------------------
 
