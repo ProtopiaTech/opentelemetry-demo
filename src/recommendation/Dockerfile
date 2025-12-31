@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-FROM docker.io/library/python:3.12-alpine3.22 AS build-venv
+FROM docker.io/library/python:3.12-slim-bookworm AS build-venv
 
-RUN apk update && \
-    apk add gcc g++ linux-headers
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc g++ && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY ./src/recommendation/requirements.txt requirements.txt
 
@@ -14,7 +15,7 @@ RUN python -m venv venv && \
 
 RUN venv/bin/opentelemetry-bootstrap -a install
 
-FROM docker.io/library/python:3.12-alpine3.22
+FROM docker.io/library/python:3.12-slim-bookworm
 
 COPY --from=build-venv /venv/ /venv/
 
