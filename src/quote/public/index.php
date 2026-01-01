@@ -22,14 +22,6 @@ use Slim\Factory\AppFactory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-// Initialize Pyroscope profiler
-if (getenv('PYROSCOPE_SERVER_ADDRESS')) {
-    \Pyroscope\PyroscopeProfiler::init([
-        'applicationName' => getenv('PYROSCOPE_APPLICATION_NAME') ?: 'quote',
-        'serverAddress' => getenv('PYROSCOPE_SERVER_ADDRESS'),
-    ]);
-}
-
 // Instantiate PHP-DI ContainerBuilder
 $containerBuilder = new ContainerBuilder();
 
