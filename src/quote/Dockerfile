@@ -9,6 +9,7 @@ FROM docker.io/library/composer:2.8.12 AS vendor
 WORKDIR /tmp/
 
 COPY ./src/quote/composer.json composer.json
+COPY ./src/quote/composer.lock composer.lock
 
 RUN composer install \
     --ignore-platform-reqs \
