@@ -16,9 +16,11 @@ COPY ./src/checkout/kafka/ kafka/
 COPY ./src/checkout/money/ money/
 COPY ./src/checkout/main.go main.go
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o checkout main.go
+# CGO_ENABLED=1 required for Pyroscope profiling
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags "-s -w" -o checkout main.go
 
-FROM gcr.io/distroless/static-debian12:nonroot
+# Use cc image instead of static for CGO binary
+FROM gcr.io/distroless/cc-debian12:nonroot
 
 WORKDIR /usr/src/app/
 

@@ -9,7 +9,9 @@ WORKDIR /usr/src/app/
 COPY ./src/payment/package.json package.json
 COPY ./src/payment/package-lock.json package-lock.json
 
-RUN npm ci --omit=dev && npm install @pyroscope/nodejs
+# Install build tools for native dependencies (@datadog/pprof used by @pyroscope/nodejs)
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN npm ci --omit=dev
 
 # -----------------------------------------------------------------------------
 

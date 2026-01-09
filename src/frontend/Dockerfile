@@ -38,6 +38,8 @@ WORKDIR /app
 COPY ./src/frontend/package.json package.json
 COPY ./src/frontend/package-lock.json package-lock.json
 
+# Install build tools for native dependencies (@datadog/pprof used by @pyroscope/nodejs)
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 RUN npm ci --omit=dev && npm install @pyroscope/nodejs
 
 # -----------------------------------------------------------------------------

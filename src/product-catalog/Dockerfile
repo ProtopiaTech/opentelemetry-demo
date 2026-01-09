@@ -15,9 +15,11 @@ COPY ./src/product-catalog/genproto/oteldemo/ genproto/oteldemo/
 COPY ./src/product-catalog/products/ products/
 COPY ./src/product-catalog/main.go main.go
 
-RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -ldflags "-s -w" -o product-catalog main.go
+# CGO_ENABLED=1 required for Pyroscope profiling
+RUN CGO_ENABLED=1 GOOS=linux GO111MODULE=on go build -ldflags "-s -w" -o product-catalog main.go
 
-FROM gcr.io/distroless/static-debian12:nonroot
+# Use cc image instead of static for CGO binary
+FROM gcr.io/distroless/cc-debian12:nonroot
 
 WORKDIR /usr/src/app/
 
