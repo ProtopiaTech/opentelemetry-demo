@@ -20,6 +20,7 @@ if os.environ.get('PYROSCOPE_SERVER_ADDRESS'):
 # Pip
 import grpc
 from opentelemetry import trace, metrics
+from pyroscope.otel import PyroscopeSpanProcessor
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
     OTLPLogExporter,
@@ -140,7 +141,11 @@ if __name__ == "__main__":
     api.add_hooks([TracingHook()])
 
     # Initialize Traces and Metrics
-    tracer = trace.get_tracer_provider().get_tracer(service_name)
+    # Add Pyroscope span processor for trace-profile linking
+    tracer_provider = trace.get_tracer_provider()
+    if hasattr(tracer_provider, "add_span_processor"):
+        tracer_provider.add_span_processor(PyroscopeSpanProcessor())
+    tracer = tracer_provider.get_tracer(service_name)
     meter = metrics.get_meter_provider().get_meter(service_name)
     rec_svc_metrics = init_metrics(meter)
 

@@ -21,6 +21,7 @@ from locust import HttpUser, task, between
 from locust_plugins.users.playwright import PlaywrightUser, pw, PageWithRetry, event
 
 from opentelemetry import context, baggage, trace
+from pyroscope.otel import PyroscopeSpanProcessor
 from opentelemetry.context import Context
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk.metrics import MeterProvider
@@ -50,6 +51,7 @@ from playwright.async_api import Route, Request
 tracer_provider = TracerProvider()
 trace.set_tracer_provider(tracer_provider)
 tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(insecure=True)))
+tracer_provider.add_span_processor(PyroscopeSpanProcessor())
 
 # Configure logger provider with the same resource
 logger_provider = LoggerProvider()
