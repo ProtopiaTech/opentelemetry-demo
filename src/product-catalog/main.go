@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -137,8 +138,9 @@ func initLoggerProvider() *sdklog.LoggerProvider {
 func main() {
 	// Initialize Pyroscope profiler
 	if pyroscopeAddr := os.Getenv("PYROSCOPE_SERVER_ADDRESS"); pyroscopeAddr != "" {
-		pyroscope.Start(pyroscope.Config{
-			ApplicationName: os.Getenv("PYROSCOPE_APPLICATION_NAME"),
+		appName := os.Getenv("PYROSCOPE_APPLICATION_NAME")
+		profiler, err := pyroscope.Start(pyroscope.Config{
+			ApplicationName: appName,
 			ServerAddress:   pyroscopeAddr,
 			ProfileTypes: []pyroscope.ProfileType{
 				pyroscope.ProfileCPU,
@@ -149,6 +151,12 @@ func main() {
 				pyroscope.ProfileGoroutines,
 			},
 		})
+		if err != nil {
+			log.Printf("Failed to start Pyroscope profiler: %v", err)
+		} else {
+			log.Printf("Pyroscope profiler started: app=%s, server=%s", appName, pyroscopeAddr)
+			defer profiler.Stop()
+		}
 	}
 
 	lp := initLoggerProvider()
