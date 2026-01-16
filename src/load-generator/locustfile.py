@@ -62,12 +62,12 @@ log_exporter = OTLPLogExporter(insecure=True)
 logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
 
 # Create logging handler that will include trace context
-handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+handler = LoggingHandler(level=logging.ERROR, logger_provider=logger_provider)
 
 # Configure root logger
 root_logger = logging.getLogger()
 root_logger.addHandler(handler)
-root_logger.setLevel(logging.INFO)
+root_logger.setLevel(logging.ERROR)
 
 # Configure metrics
 metric_exporter = OTLPMetricExporter(insecure=True)
